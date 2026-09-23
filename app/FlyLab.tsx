@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MazeLab from "./MazeLab";
+import AntLab from "./AntLab";
 import {
   actionLabel,
   createSimulation,
@@ -257,7 +258,7 @@ function Trajectory({ state }: { state: SimulationState }) {
 }
 
 export default function FlyLab() {
-  const [mode, setMode] = useState<"maze" | "circuit">("maze");
+  const [mode, setMode] = useState<"ants" | "maze" | "circuit">("ants");
   const [presetId, setPresetId] = useState(PRESETS[0].id);
   const [stimulus, setStimulus] = useState<Stimulus>(PRESETS[0].stimulus);
   const [seed, setSeed] = useState(240914);
@@ -370,25 +371,26 @@ export default function FlyLab() {
           <span className="brand-mark" aria-hidden="true"><i /><i /><i /></span>
           <span><strong>FLYLAB</strong><small>reduced connectome sandbox</small></span>
         </a>
-        <div className="model-badge"><span /> MODEL / 84N · {state.synapses.length}S</div>
-        <div className="run-state" aria-live="polite">{mode === "maze" ? "MAZE EXPLORER" : <><span className={running ? "is-running" : ""} />{running ? "RUNNING" : "PAUSED"} · {formatTime(state.timeMs)}</>}</div>
+        <div className="model-badge"><span />{mode === "ants" ? "ANT COLONY / PHEROMONE FIELD" : <>MODEL / 84N · {state.synapses.length}S</>}</div>
+        <div className="run-state" aria-live="polite">{mode === "ants" ? "MULTI-AGENT SANDBOX" : mode === "maze" ? "MAZE EXPLORER" : <><span className={running ? "is-running" : ""} />{running ? "RUNNING" : "PAUSED"} · {formatTime(state.timeMs)}</>}</div>
       </header>
 
       <section className="intro" id="top">
         <div>
-          <p className="eyebrow">MALECNS-INSPIRED / EXPERIMENT 01</p>
-          <h1>小さな回路で、<br /><em>ハエの選択</em>を観る。</h1>
+          <p className="eyebrow">{mode === "ants" ? "ANT FIELD / EMERGENT BEHAVIOR" : "MALECNS-INSPIRED / EXPERIMENT 01"}</p>
+          {mode === "ants" ? <h1>小さなアリが、<br /><em>道をつくる。</em></h1> : <h1>小さな回路で、<br /><em>ハエの選択</em>を観る。</h1>}
         </div>
         <div className="intro-copy">
-          <p>迷路をつくって、ハエの探索を観察。光、匂い、報酬を入力する回路実験も試せます。</p>
-          <p className="scope-note"><b>モデルの範囲</b> MaleCNS v1.0 の実データそのものではなく、情報伝播の実験用に設計した縮約 LIF 回路です。</p>
+          {mode === "ants" ? <><p>餌を見つけ、匂いを残し、仲間がたどる。小さな行動の積み重ねを、環境を変えながら観察する実験場。</p><p className="scope-note"><b>まず試す</b> 少し待って匂いの道ができたら、そこに壁を描いてみてください。</p></> : <><p>迷路をつくって、ハエの探索を観察。光、匂い、報酬を入力する回路実験も試せます。</p><p className="scope-note"><b>モデルの範囲</b> MaleCNS v1.0 の実データそのものではなく、情報伝播の実験用に設計した縮約 LIF 回路です。</p></>}
         </div>
       </section>
 
       <div className="experiment-modes" role="group" aria-label="実験モード">
+        <button aria-pressed={mode === "ants"} onClick={() => { setMode("ants"); setRunning(false); }}>アリの採餌</button>
         <button aria-pressed={mode === "maze"} onClick={() => { setMode("maze"); setRunning(false); }}>迷路を解く</button>
         <button aria-pressed={mode === "circuit"} onClick={() => setMode("circuit")}>回路を観察する</button>
       </div>
+      <div hidden={mode !== "ants"}><AntLab active={mode === "ants"} /></div>
       <div hidden={mode !== "maze"}><MazeLab active={mode === "maze"} renderNetwork={(brain) => <NetworkCanvas state={brain} />} /></div>
       <div hidden={mode !== "circuit"}>
       <section className="lab-grid">
@@ -477,7 +479,7 @@ export default function FlyLab() {
 
       </div>
       <footer>
-        <div><strong>FLYLAB</strong><span>MaleCNS-inspired reduced circuit simulator</span></div>
+        <div><strong>FLYLAB</strong><span>Collective behavior & reduced circuit sandbox</span></div>
         <p>このアプリは教育・探索用です。生物学的な忠実性、意識、痛覚、学習能力を再現・証明するものではありません。</p>
         <nav aria-label="参考資料"><a href="https://github.com/natverse/malecns" target="_blank" rel="noreferrer">MALECNS ↗</a><a href="https://github.com/nftechie/stonkfly" target="_blank" rel="noreferrer">STONKFLY ↗</a></nav>
       </footer>

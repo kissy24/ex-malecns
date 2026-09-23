@@ -31,12 +31,14 @@ test("server-renders the FlyLab experiment surface", async () => {
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
-  assert.match(html, /<title>FlyLab — ハエの縮約神経回路シミュレータ<\/title>/i);
-  assert.match(html, /小さな回路で/);
-  assert.match(html, /MaleCNS v1\.0 の実データそのものではなく/);
+  assert.match(html, /<title>FlyLab — アリの採餌と集団行動シミュレータ<\/title>/i);
+  assert.match(html, /小さなアリが/);
+  assert.match(html, /アリの採餌シミュレーション/);
+  assert.match(html, /匂いをすべて消す/);
+  assert.match(html, /壁を描く/);
+  assert.match(html, /局所ルールで動くマルチエージェントモデル/);
   assert.match(html, /実験開始/);
   assert.match(html, /実験記録/);
-  assert.match(html, /84N/);
   assert.match(html, /ハエに解かせる/);
   assert.match(html, /迷路を編集/);
   assert.match(html, /深さ優先探索の補助ルール/);
@@ -48,8 +50,8 @@ test("ships product metadata and no disposable starter UI", async () => {
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
-    stat(new URL("../public/og.png", import.meta.url)),
-    readFile(new URL("../public/og.png", import.meta.url)),
+    stat(new URL("../public/ant-og.png", import.meta.url)),
+    readFile(new URL("../public/ant-og.png", import.meta.url)),
   ]);
 
   assert.match(page, /<FlyLab \/>/);
