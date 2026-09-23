@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import MazeLab from "./MazeLab";
 import {
   actionLabel,
   createSimulation,
@@ -60,25 +61,30 @@ function Slider({ label, value, min = 0, max = 1, step = 0.01, tone, onChange }:
 }
 
 function useCanvasSize(ref: React.RefObject<HTMLCanvasElement | null>) {
+  const [size, setSize] = useState("");
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas) return;
     const resize = () => {
       const rect = canvas.getBoundingClientRect();
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width = Math.max(1, Math.round(rect.width * dpr));
-      canvas.height = Math.max(1, Math.round(rect.height * dpr));
+      const width = Math.max(1, Math.round(rect.width * dpr));
+      const height = Math.max(1, Math.round(rect.height * dpr));
+      if (canvas.width !== width) canvas.width = width;
+      if (canvas.height !== height) canvas.height = height;
+      setSize(`${canvas.width}x${canvas.height}`);
     };
     const observer = new ResizeObserver(resize);
     observer.observe(canvas);
     resize();
     return () => observer.disconnect();
   }, [ref]);
+  return size;
 }
 
 function NetworkCanvas({ state }: { state: SimulationState }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  useCanvasSize(canvasRef);
+  const canvasSize = useCanvasSize(canvasRef);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -147,14 +153,14 @@ function NetworkCanvas({ state }: { state: SimulationState }) {
       context.fill();
     }
     context.shadowBlur = 0;
-  }, [state]);
+  }, [state, canvasSize]);
 
   return <canvas ref={canvasRef} className="network-canvas" aria-label="縮約神経回路の活動表示" />;
 }
 
 function ActivityChart({ state }: { state: SimulationState }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  useCanvasSize(canvasRef);
+  const canvasSize = useCanvasSize(canvasRef);
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -191,13 +197,13 @@ function ActivityChart({ state }: { state: SimulationState }) {
       });
       context.stroke();
     }
-  }, [state.history]);
+  }, [state.history, canvasSize]);
   return <canvas ref={canvasRef} className="activity-canvas" aria-label="集団発火率の時系列" />;
 }
 
 function Trajectory({ state }: { state: SimulationState }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  useCanvasSize(canvasRef);
+  const canvasSize = useCanvasSize(canvasRef);
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -246,11 +252,12 @@ function Trajectory({ state }: { state: SimulationState }) {
     context.closePath();
     context.fill();
     context.restore();
-  }, [state]);
+  }, [state, canvasSize]);
   return <canvas ref={canvasRef} className="trajectory-canvas" aria-label="人工的な運動出力による軌跡" />;
 }
 
 export default function FlyLab() {
+  const [mode, setMode] = useState<"maze" | "circuit">("maze");
   const [presetId, setPresetId] = useState(PRESETS[0].id);
   const [stimulus, setStimulus] = useState<Stimulus>(PRESETS[0].stimulus);
   const [seed, setSeed] = useState(240914);
@@ -364,7 +371,7 @@ export default function FlyLab() {
           <span><strong>FLYLAB</strong><small>reduced connectome sandbox</small></span>
         </a>
         <div className="model-badge"><span /> MODEL / 84N · {state.synapses.length}S</div>
-        <div className="run-state" aria-live="polite"><span className={running ? "is-running" : ""} />{running ? "RUNNING" : "PAUSED"} · {formatTime(state.timeMs)}</div>
+        <div className="run-state" aria-live="polite">{mode === "maze" ? "MAZE EXPLORER" : <><span className={running ? "is-running" : ""} />{running ? "RUNNING" : "PAUSED"} · {formatTime(state.timeMs)}</>}</div>
       </header>
 
       <section className="intro" id="top">
@@ -373,11 +380,17 @@ export default function FlyLab() {
           <h1>小さな回路で、<br /><em>ハエの選択</em>を観る。</h1>
         </div>
         <div className="intro-copy">
-          <p>光、匂い、報酬を入力し、84個の仮想ニューロンが発火して運動出力へ至る過程を観察します。</p>
+          <p>迷路をつくって、ハエの探索を観察。光、匂い、報酬を入力する回路実験も試せます。</p>
           <p className="scope-note"><b>モデルの範囲</b> MaleCNS v1.0 の実データそのものではなく、情報伝播の実験用に設計した縮約 LIF 回路です。</p>
         </div>
       </section>
 
+      <div className="experiment-modes" role="group" aria-label="実験モード">
+        <button aria-pressed={mode === "maze"} onClick={() => { setMode("maze"); setRunning(false); }}>迷路を解く</button>
+        <button aria-pressed={mode === "circuit"} onClick={() => setMode("circuit")}>回路を観察する</button>
+      </div>
+      <div hidden={mode !== "maze"}><MazeLab active={mode === "maze"} renderNetwork={(brain) => <NetworkCanvas state={brain} />} /></div>
+      <div hidden={mode !== "circuit"}>
       <section className="lab-grid">
         <aside className="control-panel panel">
           <div className="panel-heading"><span>01</span><div><p>STIMULUS</p><h2>実験条件</h2></div></div>
@@ -462,6 +475,7 @@ export default function FlyLab() {
         ) : <div className="empty-notebook"><span>NO RECORDS YET</span><p>シミュレーションを動かし、「この結果を記録」を押すと比較表がここに残ります。</p></div>}
       </section>
 
+      </div>
       <footer>
         <div><strong>FLYLAB</strong><span>MaleCNS-inspired reduced circuit simulator</span></div>
         <p>このアプリは教育・探索用です。生物学的な忠実性、意識、痛覚、学習能力を再現・証明するものではありません。</p>

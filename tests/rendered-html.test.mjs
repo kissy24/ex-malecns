@@ -37,6 +37,9 @@ test("server-renders the FlyLab experiment surface", async () => {
   assert.match(html, /実験開始/);
   assert.match(html, /実験記録/);
   assert.match(html, /84N/);
+  assert.match(html, /ハエに解かせる/);
+  assert.match(html, /迷路を編集/);
+  assert.match(html, /深さ優先探索の補助ルール/);
   assert.doesNotMatch(html, /codex-preview|react-loading-skeleton|Your site is taking shape/i);
 });
 
