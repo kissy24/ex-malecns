@@ -6,8 +6,8 @@ import "./globals.css";
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
-const title = "FlyLab — アリの採餌と集団行動シミュレータ";
-const description = "餌を置き、壁を描き、フェロモンの道が生まれる様子を観察。アリの局所ルールから集団行動を試すマルチエージェント実験場。";
+const title = "FlyLab — アリの自律生態系シミュレータ";
+const description = "季節、食糧、空腹、出生、寿命が自動で進む小さな生態系。80匹のアリから始まる繁栄と衰退、群れの生存を見守るシミュレーション。";
 
 export async function generateMetadata(): Promise<Metadata> {
   const requestHeaders = await headers();

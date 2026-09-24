@@ -371,22 +371,22 @@ export default function FlyLab() {
           <span className="brand-mark" aria-hidden="true"><i /><i /><i /></span>
           <span><strong>FLYLAB</strong><small>reduced connectome sandbox</small></span>
         </a>
-        <div className="model-badge"><span />{mode === "ants" ? "ANT COLONY / PHEROMONE FIELD" : <>MODEL / 84N · {state.synapses.length}S</>}</div>
+        <div className="model-badge"><span />{mode === "ants" ? "ANT COLONY / LIVING ECOSYSTEM" : <>MODEL / 84N · {state.synapses.length}S</>}</div>
         <div className="run-state" aria-live="polite">{mode === "ants" ? "MULTI-AGENT SANDBOX" : mode === "maze" ? "MAZE EXPLORER" : <><span className={running ? "is-running" : ""} />{running ? "RUNNING" : "PAUSED"} · {formatTime(state.timeMs)}</>}</div>
       </header>
 
       <section className="intro" id="top">
         <div>
-          <p className="eyebrow">{mode === "ants" ? "ANT FIELD / EMERGENT BEHAVIOR" : "MALECNS-INSPIRED / EXPERIMENT 01"}</p>
-          {mode === "ants" ? <h1>小さなアリが、<br /><em>道をつくる。</em></h1> : <h1>小さな回路で、<br /><em>ハエの選択</em>を観る。</h1>}
+          <p className="eyebrow">{mode === "ants" ? "ANT FIELD / LIFE GOES ON" : "MALECNS-INSPIRED / EXPERIMENT 01"}</p>
+          {mode === "ants" ? <h1>小さな世界の、<br /><em>命のゆくえ。</em></h1> : <h1>小さな回路で、<br /><em>ハエの選択</em>を観る。</h1>}
         </div>
         <div className="intro-copy">
-          {mode === "ants" ? <><p>餌を見つけ、匂いを残し、仲間がたどる。小さな行動の積み重ねを、環境を変えながら観察する実験場。</p><p className="scope-note"><b>まず試す</b> 少し待って匂いの道ができたら、そこに壁を描いてみてください。</p></> : <><p>迷路をつくって、ハエの探索を観察。光、匂い、報酬を入力する回路実験も試せます。</p><p className="scope-note"><b>モデルの範囲</b> MaleCNS v1.0 の実データそのものではなく、情報伝播の実験用に設計した縮約 LIF 回路です。</p></>}
+          {mode === "ants" ? <><p>雨が来て、餌が育ち、群れが増える。乾いた季節に、命はつながるか。手を加えずに見守るアリの生態系。</p><p className="scope-note"><b>眺めるだけで進む</b> 80匹から始まる生存と世代交代。季節も食糧も、自動で移り変わります。</p></> : <><p>迷路をつくって、ハエの探索を観察。光、匂い、報酬を入力する回路実験も試せます。</p><p className="scope-note"><b>モデルの範囲</b> MaleCNS v1.0 の実データそのものではなく、情報伝播の実験用に設計した縮約 LIF 回路です。</p></>}
         </div>
       </section>
 
       <div className="experiment-modes" role="group" aria-label="実験モード">
-        <button aria-pressed={mode === "ants"} onClick={() => { setMode("ants"); setRunning(false); }}>アリの採餌</button>
+        <button aria-pressed={mode === "ants"} onClick={() => { setMode("ants"); setRunning(false); }}>アリの生態系</button>
         <button aria-pressed={mode === "maze"} onClick={() => { setMode("maze"); setRunning(false); }}>迷路を解く</button>
         <button aria-pressed={mode === "circuit"} onClick={() => setMode("circuit")}>回路を観察する</button>
       </div>

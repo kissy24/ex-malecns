@@ -31,11 +31,15 @@ test("server-renders the FlyLab experiment surface", async () => {
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
-  assert.match(html, /<title>FlyLab — アリの採餌と集団行動シミュレータ<\/title>/i);
-  assert.match(html, /小さなアリが/);
-  assert.match(html, /アリの採餌シミュレーション/);
-  assert.match(html, /匂いをすべて消す/);
-  assert.match(html, /壁を描く/);
+  assert.match(html, /<title>FlyLab — アリの自律生態系シミュレータ<\/title>/i);
+  assert.match(html, /小さな世界の/);
+  assert.match(html, /アリの自律生態系シミュレーション/);
+  assert.match(html, /生存数の推移/);
+  assert.match(html, /累計出生/);
+  assert.match(html, /累計死亡/);
+  assert.match(html, /餓死/);
+  assert.match(html, /絶滅後の自動リセットはありません/);
+  assert.doesNotMatch(html, /餌を置く|壁を描く|匂いをすべて消す/);
   assert.match(html, /局所ルールで動くマルチエージェントモデル/);
   assert.match(html, /実験開始/);
   assert.match(html, /実験記録/);

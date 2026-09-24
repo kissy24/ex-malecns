@@ -3,8 +3,8 @@ export const FIELD_WIDTH = 120;
 export const FIELD_HEIGHT = 76;
 export const TICK_SECONDS = 1 / 30;
 export type Point = { x: number; y: number };
-export type Ant = Point & { heading: number; carrying: boolean; scent: number };
-export type Food = Point & { amount: number };
+export type Ant = Point & { heading: number; carrying: boolean; scent: number; life?: { energy: number; age: number; lifespan: number; generation: number } };
+export type Food = Point & { amount: number; expiresAt?: number };
 export type AntConfig = { count: number; halfLife: number; deposit: number; exploration: number };
 export type Scenario = "fork" | "detour" | "scatter";
 export type FieldTool = "food" | "wall" | "erase";
@@ -18,7 +18,41 @@ export type Colony = {
   delivered: number;
   rng: number;
   history: number[];
+  ecology?: Ecology;
 };
+export type Habitat = "grassland" | "dryland" | "woodland";
+export type Season = "wet" | "dry" | "recovery";
+export type Ecology = {
+  habitat: Habitat;
+  stock: number;
+  births: number;
+  starved: number;
+  aged: number;
+  consumed: number;
+  reproductionUsed: number;
+  lostCargo: number;
+  grown: number;
+  expired: number;
+  initialFood: number;
+  initialPopulation: number;
+  peak: number;
+  generation: number;
+  season: Season;
+  seasonEndsAt: number;
+  nextFoodAt: number;
+  nextBroodAt: number;
+  eggs: Array<{ hatchAt: number; generation: number }>;
+  corpses: Array<Point & { tick: number; cause: "starvation" | "age" }>;
+  events: Array<{ tick: number; text: string }>;
+  populationHistory: Array<{ seconds: number; population: number; stock: number }>;
+  extinctAt: number | null;
+};
+export const HABITATS = {
+  grassland: { name: "草原", description: "雨季に蓄え、乾季をしのぐ", interval: 12, food: 65, wet: 40, dry: 45, recovery: 35 },
+  dryland: { name: "乾いた土地", description: "少ない餌と長い乾季", interval: 18, food: 32, wet: 25, dry: 70, recovery: 30 },
+  woodland: { name: "豊かな森", description: "多くの餌と短い乾季", interval: 10, food: 90, wet: 50, dry: 25, recovery: 40 },
+} as const;
+export const SEASON_NAMES: Record<Season, string> = { wet: "雨季", dry: "乾季", recovery: "回復期" };
 export const DEFAULT_ANT_CONFIG: AntConfig = { count: 120, halfLife: 12, deposit: 1, exploration: 0.25 };
 
 function random(world: Colony) {
@@ -59,6 +93,83 @@ export function createColony(seed = 240914, config = DEFAULT_ANT_CONFIG, scenari
   return world;
 }
 
+function event(world: Colony, text: string) {
+  const eco = world.ecology!;
+  eco.events = [{ tick: world.ticks, text }, ...eco.events].slice(0, 12);
+}
+
+function growFood(world: Colony, amount: number) {
+  if (world.food.length >= 16) return;
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    const x = 8 + random(world) * (FIELD_WIDTH - 16);
+    const y = 8 + random(world) * (FIELD_HEIGHT - 16);
+    if (Math.hypot(x - world.nest.x, y - world.nest.y) < 16 || !free(world, x, y)) continue;
+    if (world.food.some((food) => Math.hypot(food.x - x, food.y - y) < 9)) continue;
+    world.food.push({ x, y, amount, expiresAt: world.ticks + 30 * (40 + random(world) * 35) });
+    world.ecology!.grown += amount;
+    return;
+  }
+}
+
+export function createEcosystem(seed = 240914, habitat: Habitat = "grassland"): Colony {
+  const world = createColony(seed, { ...DEFAULT_ANT_CONFIG, count: 80 }, "scatter");
+  world.food = [];
+  const stock = habitat === "dryland" ? 25 : 50;
+  world.ecology = {
+    habitat, stock, births: 0, starved: 0, aged: 0, consumed: 0, reproductionUsed: 0, lostCargo: 0,
+    grown: 0, expired: 0, initialFood: stock, initialPopulation: 80, peak: 80, generation: 1,
+    season: "wet", seasonEndsAt: HABITATS[habitat].wet * 30, nextFoodAt: HABITATS[habitat].interval * 30,
+    nextBroodAt: 90, eggs: [], corpses: [], events: [], populationHistory: [{ seconds: 0, population: 80, stock }], extinctAt: null,
+  };
+  for (const ant of world.ants) {
+    ant.life = { energy: 50 + random(world) * 45, age: random(world) * 35, lifespan: 120 + random(world) * 100, generation: 1 };
+  }
+  for (let index = 0; index < 3; index += 1) growFood(world, HABITATS[habitat].food);
+  event(world, "80匹のコロニーが探索を開始");
+  return world;
+}
+
+function updateEnvironment(world: Colony) {
+  const eco = world.ecology!;
+  const habitat = HABITATS[eco.habitat];
+  if (world.ticks >= eco.seasonEndsAt) {
+    eco.season = eco.season === "wet" ? "dry" : eco.season === "dry" ? "recovery" : "wet";
+    eco.seasonEndsAt = world.ticks + habitat[eco.season] * 30;
+    event(world, `${SEASON_NAMES[eco.season]}へ。${eco.season === "dry" ? "新しい餌の発生が止まります" : "新しい餌が育ち始めます"}`);
+  }
+  world.food = world.food.filter((food) => {
+    if (food.expiresAt !== undefined && food.expiresAt <= world.ticks) { eco.expired += food.amount; return false; }
+    return food.amount > 0;
+  });
+  if (world.ticks >= eco.nextFoodAt) {
+    eco.nextFoodAt = world.ticks + habitat.interval * 30;
+    if (eco.season !== "dry") growFood(world, Math.round(habitat.food * (0.7 + random(world) * 0.6)));
+  }
+  if (world.ticks >= eco.nextBroodAt) {
+    eco.nextBroodAt = world.ticks + 90;
+    const reserve = Math.max(15, world.ants.length * 0.4);
+    // Brood is paid for up front; no living adults means no new eggs.
+    if (world.ants.length > 0 && eco.stock >= reserve + 4) {
+      const brood = Math.min(3, Math.floor((eco.stock - reserve) / 4), 240 - world.ants.length - eco.eggs.length);
+      for (let index = 0; index < brood; index += 1) {
+        eco.stock -= 4;
+        eco.reproductionUsed += 4;
+        eco.eggs.push({ hatchAt: world.ticks + 450, generation: Math.max(...world.ants.map((ant) => ant.life!.generation)) + 1 });
+      }
+    }
+  }
+  const hatching = eco.eggs.filter((egg) => egg.hatchAt <= world.ticks);
+  eco.eggs = eco.eggs.filter((egg) => egg.hatchAt > world.ticks);
+  for (const egg of hatching) {
+    world.ants.push({ ...world.nest, heading: random(world) * Math.PI * 2, carrying: false, scent: 0,
+      life: { energy: 85, age: 0, lifespan: 120 + random(world) * 100, generation: egg.generation } });
+    eco.births += 1;
+    eco.generation = Math.max(eco.generation, egg.generation);
+  }
+  if (hatching.length && (eco.births === hatching.length || eco.births % 10 < hatching.length)) event(world, `新しい働きアリが羽化。累計 ${eco.births} 匹が誕生`);
+  eco.corpses = eco.corpses.filter((corpse) => world.ticks - corpse.tick < 450);
+}
+
 function angleDifference(target: number, current: number) {
   return Math.atan2(Math.sin(target - current), Math.cos(target - current));
 }
@@ -86,13 +197,21 @@ function visible(world: Colony, a: Point, b: Point) {
 
 /** Mutates one fixed-duration tick. UI owns the world in a ref, not React state. */
 export function stepColony(world: Colony, config: AntConfig) {
+  const eco = world.ecology;
+  if (eco?.extinctAt !== undefined && eco.extinctAt !== null) return;
+  if (eco) updateEnvironment(world);
   const decay = Math.pow(0.5, TICK_SECONDS / Math.max(0.1, config.halfLife));
   for (let index = 0; index < world.pheromone.length; index += 1) {
     world.pheromone[index] = world.walls[index] ? 0 : world.pheromone[index] * decay;
   }
   for (const ant of world.ants) {
+    if (ant.life) {
+      ant.life.age += TICK_SECONDS;
+      ant.life.energy -= (ant.carrying ? 0.95 : 0.8) * TICK_SECONDS;
+      if (ant.life.energy <= 0 || ant.life.age >= ant.life.lifespan) continue;
+    }
     const noise = random(world) - 0.5;
-    if (ant.carrying) {
+    if (ant.carrying || (eco && ant.life!.energy < 30 && eco.stock > 0)) {
       // An explicit nest compass approximates path integration, not neural learning.
       const home = Math.atan2(world.nest.y - ant.y, world.nest.x - ant.x);
       ant.heading += Math.max(-0.13, Math.min(0.13, angleDifference(home, ant.heading))) + noise * 0.12;
@@ -147,22 +266,52 @@ export function stepColony(world: Colony, config: AntConfig) {
       if (Math.hypot(ant.x - world.nest.x, ant.y - world.nest.y) < 3.5) {
         ant.carrying = false;
         world.delivered += 1;
+        if (eco) eco.stock += 1;
         ant.heading += Math.PI;
       }
     } else {
       for (const food of world.food) {
         if (food.amount > 0 && Math.hypot(ant.x - food.x, ant.y - food.y) < 2.5 && visible(world, ant, food)) {
           food.amount -= 1;
-          ant.carrying = true;
-          ant.scent = 1;
-          ant.heading += Math.PI;
+          if (eco && ant.life!.energy < 45) { ant.life!.energy = Math.min(100, ant.life!.energy + 55); eco.consumed += 1; }
+          else { ant.carrying = true; ant.scent = 1; ant.heading += Math.PI; }
           break;
         }
       }
     }
+    if (eco && ant.life!.energy < 60 && eco.stock >= 1 && Math.hypot(ant.x - world.nest.x, ant.y - world.nest.y) < 3.5) {
+      eco.stock -= 1;
+      eco.consumed += 1;
+      ant.life!.energy = Math.min(100, ant.life!.energy + 55);
+    }
   }
   world.ticks += 1;
   if (world.ticks % 30 === 0) world.history = [...world.history.slice(-119), world.delivered];
+  if (eco) {
+    const previousDeaths = eco.starved + eco.aged;
+    world.ants = world.ants.filter((ant) => {
+      const life = ant.life!;
+      if (life.energy > 0 && life.age < life.lifespan) return true;
+      const cause = life.energy <= 0 ? "starvation" : "age";
+      if (cause === "starvation") eco.starved += 1; else eco.aged += 1;
+      if (ant.carrying) eco.lostCargo += 1;
+      eco.corpses.push({ x: ant.x, y: ant.y, tick: world.ticks, cause });
+      return false;
+    });
+    eco.corpses = eco.corpses.slice(-80);
+    const deaths = eco.starved + eco.aged;
+    if (deaths > previousDeaths && (previousDeaths === 0 || Math.floor(deaths / 10) > Math.floor(previousDeaths / 10))) {
+      event(world, `死亡累計 ${deaths} 匹（餓死 ${eco.starved} / 寿命 ${eco.aged}）`);
+    }
+    eco.peak = Math.max(eco.peak, world.ants.length);
+    if (world.ants.length === 0 && eco.eggs.length === 0) {
+      eco.extinctAt = world.ticks;
+      event(world, "コロニーが絶滅しました。自動で再出現はしません");
+    }
+    if (world.ticks % 150 === 0 || eco.extinctAt !== null) {
+      eco.populationHistory = [...eco.populationHistory.slice(-359), { seconds: world.ticks * TICK_SECONDS, population: world.ants.length, stock: eco.stock }];
+    }
+  }
 }
 
 export function paintField(world: Colony, point: Point, tool: FieldTool) {
