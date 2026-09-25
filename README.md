@@ -93,6 +93,16 @@ npm run build
 
 テストでは回路サイズ、シードによる決定性、可塑性 OFF 時の重み不変条件、可塑性 ON 時の重み境界、行動ラベル、完成画面のサーバー描画を確認します。
 
+## 公開前のセキュリティチェック
+
+```bash
+npm run security:setup
+git config --local core.hooksPath .githooks
+npm run security:check
+```
+
+既存の Git フックがある場合は統合してから設定してください。秘密情報は全履歴とステージ済みファイルを検査し、認証ファイルの混入も拒否します。GitHub Actions で push / PR / 週次の継続検査も行います。依存関係の更新は Dependabot が提案します。詳しくは [SECURITY.md](SECURITY.md) を参照してください。
+
 ## 主なファイル
 
 - `lib/simulation.ts`: 回路生成、LIF 更新、可塑性、行動読み出し

@@ -1,0 +1,11 @@
+title = "FlyLab publication checks"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "sites-runtime-credential"
+description = "Sites source credentials and access bypass tokens must not be committed"
+regex = '''(?i)(?:siwc_bypass_bearer_token|source_repository_token|sites_write_token)["']?\s*[:=]\s*["']([a-zA-Z0-9_./+=-]{20,})["']'''
+secretGroup = 1
+keywords = ["siwc_bypass_bearer_token", "source_repository_token", "sites_write_token"]

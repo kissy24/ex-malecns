@@ -21,6 +21,20 @@
 # misc
 .DS_Store
 *.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+.dev.vars*
+.npmrc
+.pypirc
+.netrc
+.git-credentials
+/.cache/
+*gitleaks-report*
+*.sarif
+*.tsbuildinfo
 
 # debug
 npm-debug.log*
