@@ -18,7 +18,7 @@
     "security:check": "npm run security:secrets && npm run security:dependencies"
   },
   "dependencies": {
-    "next": "16.3.6",
+    "next": "16.4.2",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
